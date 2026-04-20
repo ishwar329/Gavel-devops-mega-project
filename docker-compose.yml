@@ -67,6 +67,29 @@ services:
       init-tables:
         condition: service_completed_successfully
 
+  shop:
+    build:
+      context: .
+      dockerfile: shop-service/Dockerfile
+    ports:
+      - "8083:8083"
+    environment:
+      - DYNAMODB_ENDPOINT=http://dynamodb-local:8000
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=minioadmin
+      - S3_SECRET_KEY=minioadmin
+      - S3_BUCKET=uploads
+      - S3_PUBLIC_URL=http://localhost:9000/uploads
+      - JWT_SECRET=dev-secret-change-in-production
+      - PAYMENT_SERVICE_URL=http://payment:8085
+    depends_on:
+      dynamodb-local:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      init-tables:
+        condition: service_completed_successfully
+
   frontend:
     build:
       context: ./frontend
@@ -74,3 +97,4 @@ services:
       - "3000:3000"
     depends_on:
       - user
+      - shop
