@@ -78,6 +78,16 @@ The platform is available at:
 
 ## Testing
 
+**Unit tests** — 477 tests with 84.2% overall coverage:
+```bash
+./mvnw test
+```
+
+Coverage by service:
+- shop-service: 90.4% | payment-service: 87.4% | auction-service: 84.2%
+- notification-service: 83.5% | shared: 83.8% | user-service: 79.2%
+- bid-service: 74.7%
+
 **Smoke tests** — end-to-end API contract validation:
 ```bash
 bash tests/smoke_test.sh
