@@ -121,6 +121,25 @@ services:
       init-tables:
         condition: service_completed_successfully
 
+  auction:
+    build:
+      context: .
+      dockerfile: auction-service/Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOST=redis
+      - DYNAMODB_ENDPOINT=http://dynamodb-local:8000
+      - JWT_SECRET=dev-secret-change-in-production
+      - CONCURRENCY_STRATEGY=pessimistic
+    depends_on:
+      dynamodb-local:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      init-tables:
+        condition: service_completed_successfully
+
   notification:
     build:
       context: .

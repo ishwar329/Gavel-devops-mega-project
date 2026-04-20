@@ -1,0 +1,26 @@
+server:
+  port: 8081
+  shutdown: graceful
+
+spring:
+  application:
+    name: auction-service
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  lifecycle:
+    timeout-per-shutdown-phase: 15s
+
+jwt:
+  secret: ${JWT_SECRET:dev-secret-change-in-production}
+
+aws:
+  dynamodb:
+    endpoint: ${DYNAMODB_ENDPOINT:}
+  region: ${AWS_REGION:us-east-1}
+
+auction:
+  concurrency-strategy: ${CONCURRENCY_STRATEGY:pessimistic}

@@ -24,6 +24,7 @@
         <module>bid-service</module>
         <module>payment-service</module>
         <module>notification-service</module>
+        <module>auction-service</module>
         <module>scripts/init-tables</module>
     </modules>
 
