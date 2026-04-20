@@ -1,0 +1,23 @@
+server:
+  port: 8082
+  shutdown: graceful
+
+spring:
+  application:
+    name: user-service
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+  lifecycle:
+    timeout-per-shutdown-phase: 15s
+
+aws:
+  dynamodb:
+    endpoint: ${DYNAMODB_ENDPOINT:}
+  region: ${AWS_REGION:us-east-1}
+
+jwt:
+  secret: ${JWT_SECRET:dev-secret-change-in-production}
+
+bid:
+  service:
+    url: ${BID_SERVICE_URL:http://bid:8084}

@@ -1,0 +1,77 @@
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '@/context/AuthContext'
+import { Button } from '@/components/ui'
+import { UserIcon, HeartIcon } from '@/components/icons'
+import { NotificationBell } from './NotificationBell'
+
+export function Navbar() {
+  const { user, isSeller, logout } = useAuth()
+  const navigate = useNavigate()
+
+  const handleLogout = () => {
+    logout()
+    navigate('/')
+  }
+
+  return (
+    <nav className="bg-surface border-b border-border sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-8 h-20 flex items-center justify-between">
+        <Link
+          to="/"
+          className="font-display font-bold text-3xl text-brand tracking-tight hover:opacity-80 transition-opacity"
+        >
+          SurpriseAuction
+        </Link>
+
+        <div className="flex items-center gap-5 font-sans font-medium">
+          {user ? (
+            isSeller ? (
+              <>
+                <Link to="/seller/dashboard" className="text-text-primary hover:text-brand transition-colors text-base">
+                  My Dashboard
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="text-text-secondary hover:text-text-primary transition-colors text-base"
+                >
+                  Sign Out
+                </button>
+                <Link to="/profile" className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-border shadow-sm hover:border-brand transition-colors">
+                  <UserIcon width={18} height={18} />
+                  <span className="text-base">{user.username}</span>
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/watchlist"
+                  className="text-text-secondary hover:text-red-500 transition-colors"
+                  title="My Watchlist"
+                >
+                  <HeartIcon width={20} height={20} />
+                </Link>
+                <NotificationBell />
+                <button
+                  onClick={handleLogout}
+                  className="text-text-secondary hover:text-text-primary transition-colors text-base"
+                >
+                  Sign Out
+                </button>
+                <Link to="/profile" className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-border shadow-sm hover:border-brand transition-colors">
+                  <UserIcon width={18} height={18} />
+                  <span className="text-base">{user.username}</span>
+                </Link>
+              </>
+            )
+          ) : (
+            <>
+              <Button variant="primary" size="md" onClick={() => navigate('/login')}>
+                Sign In
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+    </nav>
+  )
+}
