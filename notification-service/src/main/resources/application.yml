@@ -15,7 +15,7 @@ spring:
     timeout-per-shutdown-phase: 15s
 
 jwt:
-  secret: ${JWT_SECRET:dev-secret-change-in-production}
+  secret: ${JWT_SECRET:dev-secret-change-in-production-key}
 
 notification:
   consumer:

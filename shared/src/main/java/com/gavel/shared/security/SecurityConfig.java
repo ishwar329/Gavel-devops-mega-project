@@ -15,7 +15,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Value("${jwt.secret:dev-secret-change-in-production}")
+    @Value("${jwt.secret:dev-secret-change-in-production-key}")
     private String jwtSecret;
 
     @Bean

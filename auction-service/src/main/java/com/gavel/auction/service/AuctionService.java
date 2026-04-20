@@ -46,7 +46,8 @@ public class AuctionService {
         if (req.shopId() == null || req.shopId().isBlank()) {
             throw new ValidationException("shop_id is required");
         }
-        if (req.duration() < 1 || req.duration() > 10080) {
+        int duration = req.effectiveDuration();
+        if (duration < 1 || duration > 10080) {
             throw new ValidationException("duration must be between 1 and 10080 minutes");
         }
         if (req.startBid() < 0) {
@@ -79,7 +80,7 @@ public class AuctionService {
             status = "OPEN";
         }
 
-        Instant endTime = startTime.plus(Duration.ofMinutes(req.duration()));
+        Instant endTime = startTime.plus(Duration.ofMinutes(duration));
 
         Instant pickupStart = Instant.parse(req.pickupStart());
         Instant pickupEnd = Instant.parse(req.pickupEnd());

@@ -4,6 +4,12 @@ COPY mvnw pom.xml ./
 COPY .mvn .mvn
 COPY shared ./shared
 COPY auction-service ./auction-service
+COPY user-service/pom.xml ./user-service/pom.xml
+COPY shop-service/pom.xml ./shop-service/pom.xml
+COPY bid-service/pom.xml ./bid-service/pom.xml
+COPY payment-service/pom.xml ./payment-service/pom.xml
+COPY notification-service/pom.xml ./notification-service/pom.xml
+COPY scripts/init-tables/pom.xml ./scripts/init-tables/pom.xml
 RUN ./mvnw package -pl shared,auction-service -am -DskipTests --no-transfer-progress -q
 
 FROM eclipse-temurin:21-jre-alpine

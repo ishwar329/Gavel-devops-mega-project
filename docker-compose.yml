@@ -59,7 +59,7 @@ services:
       - "8082:8082"
     environment:
       - DYNAMODB_ENDPOINT=http://dynamodb-local:8000
-      - JWT_SECRET=dev-secret-change-in-production
+      - JWT_SECRET=dev-secret-change-in-production-key
       - BID_SERVICE_URL=http://bid:8084
     depends_on:
       dynamodb-local:
@@ -80,7 +80,7 @@ services:
       - S3_SECRET_KEY=minioadmin
       - S3_BUCKET=uploads
       - S3_PUBLIC_URL=http://localhost:9000/uploads
-      - JWT_SECRET=dev-secret-change-in-production
+      - JWT_SECRET=dev-secret-change-in-production-key
       - PAYMENT_SERVICE_URL=http://payment:8085
     depends_on:
       dynamodb-local:
@@ -98,7 +98,7 @@ services:
       - "8084:8084"
     environment:
       - REDIS_HOST=redis
-      - JWT_SECRET=dev-secret-change-in-production
+      - JWT_SECRET=dev-secret-change-in-production-key
     depends_on:
       redis:
         condition: service_healthy
@@ -112,7 +112,7 @@ services:
     environment:
       - DYNAMODB_ENDPOINT=http://dynamodb-local:8000
       - REDIS_HOST=redis
-      - JWT_SECRET=dev-secret-change-in-production
+      - JWT_SECRET=dev-secret-change-in-production-key
     depends_on:
       dynamodb-local:
         condition: service_healthy
@@ -130,7 +130,7 @@ services:
     environment:
       - REDIS_HOST=redis
       - DYNAMODB_ENDPOINT=http://dynamodb-local:8000
-      - JWT_SECRET=dev-secret-change-in-production
+      - JWT_SECRET=dev-secret-change-in-production-key
     depends_on:
       dynamodb-local:
         condition: service_healthy
@@ -147,7 +147,7 @@ services:
       - "8080:8080"
     environment:
       - REDIS_HOST=redis
-      - JWT_SECRET=dev-secret-change-in-production
+      - JWT_SECRET=dev-secret-change-in-production-key
       - NOTIF_WORKERS=10
     depends_on:
       redis:

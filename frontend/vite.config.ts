@@ -10,11 +10,13 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      // Proxy API and WebSocket calls to the Go notification service
-      '/auctions': { target: 'http://localhost:8080', ws: true },
-      '/auth':     { target: 'http://localhost:8080' },
-      '/users':    { target: 'http://localhost:8080' },
-      '/metrics':  { target: 'http://localhost:8080' },
+      '/auctions': { target: 'http://localhost:8081', ws: true },
+      '/auth':     { target: 'http://localhost:8082' },
+      '/users':    { target: 'http://localhost:8082' },
+      '/shops':    { target: 'http://localhost:8083' },
+      '/sellers':  { target: 'http://localhost:8083' },
+      '/uploads':  { target: 'http://localhost:8083' },
+      '/notifications': { target: 'http://localhost:8080' },
     },
   },
 })

@@ -21,5 +21,10 @@ public record CreateAuctionRequest(
         @JsonProperty("start_bid") long startBid,
         @JsonProperty("scheduled_start") String scheduledStart,
         @JsonProperty("pickup_start") String pickupStart,
-        @JsonProperty("pickup_end") String pickupEnd
-) {}
+        @JsonProperty("pickup_end") String pickupEnd,
+        @JsonProperty("duration_minutes") int durationMinutes
+) {
+    public int effectiveDuration() {
+        return duration > 0 ? duration : durationMinutes;
+    }
+}

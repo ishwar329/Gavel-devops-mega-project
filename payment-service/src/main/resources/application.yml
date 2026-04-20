@@ -20,7 +20,7 @@ aws:
   region: ${AWS_REGION:us-east-1}
 
 jwt:
-  secret: ${JWT_SECRET:dev-secret-change-in-production}
+  secret: ${JWT_SECRET:dev-secret-change-in-production-key}
 
 payment:
   consumer:
