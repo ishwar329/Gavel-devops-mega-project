@@ -28,7 +28,6 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/auctions/*/subscribe").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/auctions/*/subscribe/sse").permitAll()
                         .requestMatchers(HttpMethod.GET, "/notifications/subscribe").permitAll()
                         .requestMatchers(HttpMethod.GET, "/metrics").permitAll()
                         .anyRequest().authenticated()
