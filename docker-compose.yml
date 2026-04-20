@@ -103,6 +103,24 @@ services:
       redis:
         condition: service_healthy
 
+  payment:
+    build:
+      context: .
+      dockerfile: payment-service/Dockerfile
+    ports:
+      - "8085:8085"
+    environment:
+      - DYNAMODB_ENDPOINT=http://dynamodb-local:8000
+      - REDIS_HOST=redis
+      - JWT_SECRET=dev-secret-change-in-production
+    depends_on:
+      dynamodb-local:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      init-tables:
+        condition: service_completed_successfully
+
   frontend:
     build:
       context: ./frontend
