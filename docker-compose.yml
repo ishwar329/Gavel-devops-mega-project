@@ -121,6 +121,20 @@ services:
       init-tables:
         condition: service_completed_successfully
 
+  notification:
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - REDIS_HOST=redis
+      - JWT_SECRET=dev-secret-change-in-production
+      - NOTIF_WORKERS=10
+    depends_on:
+      redis:
+        condition: service_healthy
+
   frontend:
     build:
       context: ./frontend
@@ -130,3 +144,4 @@ services:
       - user
       - shop
       - bid
+      - notification
