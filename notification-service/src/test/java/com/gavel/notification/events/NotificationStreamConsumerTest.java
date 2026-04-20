@@ -228,4 +228,29 @@ class NotificationStreamConsumerTest {
     void stop_setsRunningFalse() {
         consumer.stop();
     }
+
+    @Test
+    void start_createsConsumerGroupsAndStartsStreamPolling() throws InterruptedException {
+        when(streamOps.read(any(org.springframework.data.redis.connection.stream.Consumer.class), any(org.springframework.data.redis.connection.stream.StreamReadOptions.class), any(org.springframework.data.redis.connection.stream.StreamOffset.class))).thenReturn(null);
+
+        consumer.start();
+        Thread.sleep(100);
+        consumer.stop();
+
+        verify(streamOps, atLeastOnce()).createGroup(eq("bid:placed"), any(), eq("notification-service"));
+        verify(streamOps, atLeastOnce()).createGroup(eq("auction:closed"), any(), eq("notification-service"));
+        verify(streamOps, atLeast(1)).read(any(org.springframework.data.redis.connection.stream.Consumer.class), any(org.springframework.data.redis.connection.stream.StreamReadOptions.class), any(org.springframework.data.redis.connection.stream.StreamOffset.class));
+    }
+
+    @Test
+    void start_handlesExistingConsumerGroup() throws InterruptedException {
+        doThrow(new RuntimeException("BUSYGROUP")).when(streamOps).createGroup(anyString(), any(), anyString());
+        when(streamOps.read(any(org.springframework.data.redis.connection.stream.Consumer.class), any(org.springframework.data.redis.connection.stream.StreamReadOptions.class), any(org.springframework.data.redis.connection.stream.StreamOffset.class))).thenReturn(null);
+
+        consumer.start();
+        Thread.sleep(100);
+        consumer.stop();
+
+        verify(streamOps, atLeastOnce()).createGroup(anyString(), any(), anyString());
+    }
 }
