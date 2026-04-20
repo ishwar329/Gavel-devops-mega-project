@@ -187,4 +187,103 @@ class BidRepositoryTest {
 
         verify(valueOps, never()).set(eq("bid:b-1"), anyString());
     }
+
+
+    @Test
+    void markWon_withNullRaw_skips() {
+        when(zsetOps.range("bids:auction:a-1", 0, -1))
+                .thenReturn(new LinkedHashSet<>(List.of("b-1")));
+        when(valueOps.get("bid:b-1")).thenReturn(null);
+
+        repository.markWon("a-1", "u-1");
+
+        verify(valueOps, never()).set(anyString(), anyString());
+    }
+
+    @Test
+    void markWon_withInvalidJson_skips() {
+        when(zsetOps.range("bids:auction:a-1", 0, -1))
+                .thenReturn(new LinkedHashSet<>(List.of("b-1")));
+        when(valueOps.get("bid:b-1")).thenReturn("{bad-json");
+
+        repository.markWon("a-1", "u-1");
+
+        verify(valueOps, times(1)).get("bid:b-1");
+        verify(valueOps, never()).set(eq("bid:b-1"), anyString());
+    }
+
+    @Test
+    void markOutbid_withNullRaw_skips() {
+        when(zsetOps.range("bids:auction:a-1", 0, -1))
+                .thenReturn(new LinkedHashSet<>(List.of("b-1")));
+        when(valueOps.get("bid:b-1")).thenReturn(null);
+
+        repository.markOutbid("a-1", "b-2");
+
+        verify(valueOps, never()).set(anyString(), anyString());
+    }
+
+    @Test
+    void markOutbid_withInvalidJson_skips() {
+        when(zsetOps.range("bids:auction:a-1", 0, -1))
+                .thenReturn(new LinkedHashSet<>(List.of("b-1")));
+        when(valueOps.get("bid:b-1")).thenReturn("{corrupt}");
+
+        repository.markOutbid("a-1", "b-2");
+
+        verify(valueOps, never()).set(eq("bid:b-1"), anyString());
+    }
+
+    @Test
+    void markUserPreviousBids_withInvalidJson_skips() {
+        when(zsetOps.range("bids:auction:a-1", 0, -1))
+                .thenReturn(new LinkedHashSet<>(List.of("b-1")));
+        when(valueOps.get("bid:b-1")).thenReturn("{malformed");
+
+        repository.markUserPreviousBids("a-1", "u-1", "b-2");
+
+        verify(valueOps, never()).set(eq("bid:b-1"), anyString());
+    }
+
+    @Test
+    void markWon_nonAcceptedStatus_doesNotUpdate() throws Exception {
+        Bid bid = makeBid("b-1", "a-1", "u-1", 500, "OUTBID");
+        String json = objectMapper.writeValueAsString(bid);
+
+        when(zsetOps.range("bids:auction:a-1", 0, -1))
+                .thenReturn(new LinkedHashSet<>(List.of("b-1")));
+        when(valueOps.get("bid:b-1")).thenReturn(json);
+
+        repository.markWon("a-1", "u-1");
+
+        verify(valueOps, never()).set(eq("bid:b-1"), argThat(s -> s.contains("WON")));
+    }
+
+    @Test
+    void markOutbid_nonAcceptedStatus_doesNotUpdate() throws Exception {
+        Bid bid = makeBid("b-1", "a-1", "u-1", 500, "WON");
+        String json = objectMapper.writeValueAsString(bid);
+
+        when(zsetOps.range("bids:auction:a-1", 0, -1))
+                .thenReturn(new LinkedHashSet<>(List.of("b-1", "b-2")));
+        when(valueOps.get("bid:b-1")).thenReturn(json);
+
+        repository.markOutbid("a-1", "b-2");
+
+        verify(valueOps, never()).set(eq("bid:b-1"), argThat(s -> s.contains("OUTBID")));
+    }
+
+    @Test
+    void markUserPreviousBids_nonAcceptedStatus_doesNotUpdate() throws Exception {
+        Bid bid = makeBid("b-1", "a-1", "u-1", 400, "WON");
+        String json = objectMapper.writeValueAsString(bid);
+
+        when(zsetOps.range("bids:auction:a-1", 0, -1))
+                .thenReturn(new LinkedHashSet<>(List.of("b-1", "b-2")));
+        when(valueOps.get("bid:b-1")).thenReturn(json);
+
+        repository.markUserPreviousBids("a-1", "u-1", "b-2");
+
+        verify(valueOps, never()).set(eq("bid:b-1"), argThat(s -> s.contains("OUTBID")));
+    }
 }
