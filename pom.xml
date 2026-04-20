@@ -21,6 +21,7 @@
         <module>shared</module>
         <module>user-service</module>
         <module>shop-service</module>
+        <module>bid-service</module>
         <module>scripts/init-tables</module>
     </modules>
 

@@ -1,0 +1,22 @@
+server:
+  port: 8084
+  shutdown: graceful
+
+spring:
+  application:
+    name: bid-service
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  lifecycle:
+    timeout-per-shutdown-phase: 15s
+
+jwt:
+  secret: ${JWT_SECRET:dev-secret-change-in-production}
+
+bid:
+  consumer:
+    workers: ${BID_WORKERS:10}

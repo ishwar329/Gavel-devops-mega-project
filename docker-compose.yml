@@ -90,6 +90,19 @@ services:
       init-tables:
         condition: service_completed_successfully
 
+  bid:
+    build:
+      context: .
+      dockerfile: bid-service/Dockerfile
+    ports:
+      - "8084:8084"
+    environment:
+      - REDIS_HOST=redis
+      - JWT_SECRET=dev-secret-change-in-production
+    depends_on:
+      redis:
+        condition: service_healthy
+
   frontend:
     build:
       context: ./frontend
@@ -98,3 +111,4 @@ services:
     depends_on:
       - user
       - shop
+      - bid
