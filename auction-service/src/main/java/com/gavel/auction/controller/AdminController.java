@@ -27,19 +27,4 @@ public class AdminController {
         auctionService.resetMetrics();
         return ResponseEntity.ok(Map.of("message", "metrics reset"));
     }
-
-    @GetMapping("/strategy")
-    public ResponseEntity<?> getStrategy() {
-        return ResponseEntity.ok(Map.of("strategy", auctionService.getStrategy()));
-    }
-
-    @PutMapping("/strategy")
-    public ResponseEntity<?> setStrategy(@RequestBody Map<String, String> body) {
-        String strategy = body.get("strategy");
-        if (strategy == null || (!strategy.equals("pessimistic") && !strategy.equals("optimistic") && !strategy.equals("queue"))) {
-            return ResponseEntity.badRequest().body(Map.of("error", "invalid strategy"));
-        }
-        auctionService.setStrategy(strategy);
-        return ResponseEntity.ok(Map.of("strategy", strategy));
-    }
 }

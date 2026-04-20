@@ -1,6 +1,8 @@
 package com.gavel.auction.service;
 
-import com.gavel.auction.concurrency.*;
+import com.gavel.auction.concurrency.BidException;
+import com.gavel.auction.concurrency.BidPlacement;
+import com.gavel.auction.concurrency.PessimisticStrategy;
 import com.gavel.auction.events.AuctionEventPublisher;
 import com.gavel.auction.model.*;
 import com.gavel.auction.repository.AuctionRepository;
@@ -8,7 +10,6 @@ import com.gavel.shared.events.AuctionClosedEvent;
 import com.gavel.shared.events.BidPlacedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -26,26 +27,16 @@ public class AuctionService {
     private final AuctionEventPublisher publisher;
     private final MetricsCollector metrics;
     private final PessimisticStrategy pessimistic;
-    private final OptimisticStrategy optimistic;
-    private final QueueStrategy queue;
     private final ExecutorService asyncExecutor = Executors.newCachedThreadPool();
-
-    private volatile ConcurrencyStrategy activeStrategy;
 
     public AuctionService(AuctionRepository repo,
                           AuctionEventPublisher publisher,
                           MetricsCollector metrics,
-                          PessimisticStrategy pessimistic,
-                          OptimisticStrategy optimistic,
-                          QueueStrategy queue,
-                          @Value("${auction.concurrency-strategy:pessimistic}") String strategyName) {
+                          PessimisticStrategy pessimistic) {
         this.repo = repo;
         this.publisher = publisher;
         this.metrics = metrics;
         this.pessimistic = pessimistic;
-        this.optimistic = optimistic;
-        this.queue = queue;
-        this.activeStrategy = resolveStrategy(strategyName);
     }
 
     public Auction createAuction(CreateAuctionRequest req, String sellerId) {
@@ -177,7 +168,7 @@ public class AuctionService {
         Instant start = Instant.now();
         BidPlacement placement;
         try {
-            placement = activeStrategy.tryPlaceBid(auctionId, amount, userId);
+            placement = pessimistic.tryPlaceBid(auctionId, amount, userId);
         } catch (BidException e) {
             metrics.recordRejected();
             throw e;
@@ -244,7 +235,6 @@ public class AuctionService {
             throw new RuntimeException("Failed to publish auction closed event", e);
         }
 
-        queue.stop(auctionId);
         asyncExecutor.submit(() -> repo.persistClosedState(auctionId));
         asyncExecutor.submit(() -> repo.cleanupRedis(auctionId));
     }
@@ -253,28 +243,12 @@ public class AuctionService {
         repo.open(auctionId);
     }
 
-    public String getStrategy() {
-        return activeStrategy.name();
-    }
-
-    public void setStrategy(String name) {
-        activeStrategy = resolveStrategy(name);
-    }
-
     public BidMetrics getMetrics() {
         return metrics.snapshot();
     }
 
     public void resetMetrics() {
         metrics.reset();
-    }
-
-    private ConcurrencyStrategy resolveStrategy(String name) {
-        return switch (name.toLowerCase()) {
-            case "optimistic" -> optimistic;
-            case "queue" -> queue;
-            default -> pessimistic;
-        };
     }
 
     public static class NotFoundException extends RuntimeException {

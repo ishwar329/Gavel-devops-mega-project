@@ -10,7 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @Component
-public class PessimisticStrategy implements ConcurrencyStrategy {
+public class PessimisticStrategy {
 
     private final StringRedisTemplate redisTemplate;
     private final String luaScript;
@@ -25,7 +25,6 @@ public class PessimisticStrategy implements ConcurrencyStrategy {
         }
     }
 
-    @Override
     @SuppressWarnings("unchecked")
     public BidPlacement tryPlaceBid(String auctionId, long amount, String bidderId) {
         String hashKey = "auction:" + auctionId;
@@ -61,8 +60,4 @@ public class PessimisticStrategy implements ConcurrencyStrategy {
         return new BidPlacement(newVersion, evicted, floor);
     }
 
-    @Override
-    public String name() {
-        return "pessimistic";
-    }
 }

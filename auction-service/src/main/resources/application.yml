@@ -22,5 +22,3 @@ aws:
     endpoint: ${DYNAMODB_ENDPOINT:}
   region: ${AWS_REGION:us-east-1}
 
-auction:
-  concurrency-strategy: ${CONCURRENCY_STRATEGY:pessimistic}
