@@ -9,23 +9,19 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-import org.springframework.data.redis.core.StreamOperations;
-import org.springframework.data.redis.core.StringRedisTemplate;
 
-import java.lang.reflect.Method;
 import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class BidEventConsumerTest {
 
-    @Mock private StringRedisTemplate redisTemplate;
     @Mock private BidService bidService;
-    @Mock private StreamOperations<String, Object, Object> streamOps;
 
     private ObjectMapper objectMapper;
     private BidEventConsumer consumer;
@@ -33,26 +29,7 @@ class BidEventConsumerTest {
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
-        when(redisTemplate.opsForStream()).thenReturn(streamOps);
-        consumer = new BidEventConsumer(redisTemplate, bidService, objectMapper, 2);
-    }
-
-    private boolean invokeHandleMessage(String stream, String payload) throws Exception {
-        Method method = BidEventConsumer.class.getDeclaredMethod("handleMessage", String.class, String.class);
-        method.setAccessible(true);
-        return (boolean) method.invoke(consumer, stream, payload);
-    }
-
-    private boolean invokeHandleBidPlaced(String payload) throws Exception {
-        Method method = BidEventConsumer.class.getDeclaredMethod("handleBidPlaced", String.class);
-        method.setAccessible(true);
-        return (boolean) method.invoke(consumer, payload);
-    }
-
-    private boolean invokeHandleAuctionClosed(String payload) throws Exception {
-        Method method = BidEventConsumer.class.getDeclaredMethod("handleAuctionClosed", String.class);
-        method.setAccessible(true);
-        return (boolean) method.invoke(consumer, payload);
+        consumer = new BidEventConsumer(bidService, objectMapper);
     }
 
     @Test
@@ -72,15 +49,15 @@ class BidEventConsumerTest {
             put("timestamp", Instant.now().toString());
         }});
 
-        boolean result = invokeHandleBidPlaced(payload);
+        boolean result = consumer.handleBidPlaced(payload);
 
         assertTrue(result);
         verify(bidService).recordBid(any());
     }
 
     @Test
-    void handleBidPlaced_invalidJson_discardsAndReturnsTrue() throws Exception {
-        boolean result = invokeHandleBidPlaced("not-json");
+    void handleBidPlaced_invalidJson_discardsAndReturnsTrue() {
+        boolean result = consumer.handleBidPlaced("not-json");
         assertTrue(result);
         verify(bidService, never()).recordBid(any());
     }
@@ -104,7 +81,7 @@ class BidEventConsumerTest {
 
         doThrow(new RuntimeException("fail")).when(bidService).recordBid(any());
 
-        boolean result = invokeHandleBidPlaced(payload);
+        boolean result = consumer.handleBidPlaced(payload);
         assertFalse(result);
     }
 
@@ -121,7 +98,7 @@ class BidEventConsumerTest {
             put("closed_at", Instant.now().toString());
         }});
 
-        boolean result = invokeHandleAuctionClosed(payload);
+        boolean result = consumer.handleAuctionClosed(payload);
 
         assertTrue(result);
         verify(bidService).markWinnerBid("a-1", "u-1");
@@ -141,7 +118,7 @@ class BidEventConsumerTest {
             put("closed_at", Instant.now().toString());
         }});
 
-        boolean result = invokeHandleAuctionClosed(payload);
+        boolean result = consumer.handleAuctionClosed(payload);
 
         assertTrue(result);
         verify(bidService).markWinnerBid("a-1", "u-1");
@@ -161,21 +138,21 @@ class BidEventConsumerTest {
             put("closed_at", Instant.now().toString());
         }});
 
-        boolean result = invokeHandleAuctionClosed(payload);
+        boolean result = consumer.handleAuctionClosed(payload);
 
         assertTrue(result);
         verify(bidService, never()).markWinnerBid(anyString(), anyString());
     }
 
     @Test
-    void handleAuctionClosed_invalidJson_discardsAndReturnsTrue() throws Exception {
-        boolean result = invokeHandleAuctionClosed("{bad");
+    void handleAuctionClosed_invalidJson_discardsAndReturnsTrue() {
+        boolean result = consumer.handleAuctionClosed("{bad");
         assertTrue(result);
         verify(bidService, never()).markWinnerBid(anyString(), anyString());
     }
 
     @Test
-    void handleMessage_bidPlacedStream_delegatesToHandleBidPlaced() throws Exception {
+    void onBidPlaced_delegatesToHandleBidPlaced() throws Exception {
         String payload = objectMapper.writeValueAsString(new java.util.LinkedHashMap<>() {{
             put("auction_id", "a-1");
             put("bid_id", "b-1");
@@ -191,15 +168,8 @@ class BidEventConsumerTest {
             put("timestamp", Instant.now().toString());
         }});
 
-        boolean result = invokeHandleMessage("bid:placed", payload);
-        assertTrue(result);
+        consumer.onBidPlaced(payload);
         verify(bidService).recordBid(any());
-    }
-
-    @Test
-    void handleMessage_unknownStream_returnsTrue() throws Exception {
-        boolean result = invokeHandleMessage("unknown:stream", "{}");
-        assertTrue(result);
     }
 
     @Test
@@ -219,7 +189,7 @@ class BidEventConsumerTest {
             put("timestamp", "not-a-timestamp");
         }});
 
-        boolean result = invokeHandleBidPlaced(payload);
+        boolean result = consumer.handleBidPlaced(payload);
         assertTrue(result);
         verify(bidService).recordBid(any());
     }
@@ -239,38 +209,7 @@ class BidEventConsumerTest {
 
         doThrow(new RuntimeException("fail")).when(bidService).markWinnerBid("a-1", "u-1");
 
-        boolean result = invokeHandleAuctionClosed(payload);
+        boolean result = consumer.handleAuctionClosed(payload);
         assertFalse(result);
-    }
-
-    @Test
-    void stop_setsRunningFalse() {
-        consumer.stop();
-        // just verifying no exception
-    }
-
-    @Test
-    void start_createsConsumerGroupsAndStartsStreamPolling() throws InterruptedException {
-        when(streamOps.read(any(org.springframework.data.redis.connection.stream.Consumer.class), any(org.springframework.data.redis.connection.stream.StreamReadOptions.class), any(org.springframework.data.redis.connection.stream.StreamOffset.class))).thenReturn(null);
-
-        consumer.start();
-        Thread.sleep(100);
-        consumer.stop();
-
-        verify(streamOps, atLeastOnce()).createGroup(eq("bid:placed"), any(), eq("bid-service"));
-        verify(streamOps, atLeastOnce()).createGroup(eq("auction:closed"), any(), eq("bid-service"));
-        verify(streamOps, atLeast(1)).read(any(org.springframework.data.redis.connection.stream.Consumer.class), any(org.springframework.data.redis.connection.stream.StreamReadOptions.class), any(org.springframework.data.redis.connection.stream.StreamOffset.class));
-    }
-
-    @Test
-    void start_handlesExistingConsumerGroup() throws InterruptedException {
-        doThrow(new RuntimeException("BUSYGROUP")).when(streamOps).createGroup(anyString(), any(), anyString());
-        when(streamOps.read(any(org.springframework.data.redis.connection.stream.Consumer.class), any(org.springframework.data.redis.connection.stream.StreamReadOptions.class), any(org.springframework.data.redis.connection.stream.StreamOffset.class))).thenReturn(null);
-
-        consumer.start();
-        Thread.sleep(100);
-        consumer.stop();
-
-        verify(streamOps, atLeastOnce()).createGroup(anyString(), any(), anyString());
     }
 }

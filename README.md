@@ -11,27 +11,28 @@ Multi-module Maven project with 6 Spring Boot microservices:
 | **auction-service** | 8081 | Auction lifecycle, Lua-based bidding, auto-closer, geo queries |
 | **user-service** | 8082 | Registration, JWT auth, profiles, watchlists |
 | **shop-service** | 8083 | Shops, items, reviews, S3 image uploads |
-| **bid-service** | 8084 | Bid history (Redis), stream consumer |
+| **bid-service** | 8084 | Bid history (Redis), Kafka consumer |
 | **payment-service** | 8085 | Payment processing, recovery job, DynamoDB |
-| **notification-service** | 8080 | WebSocket push, notification storage, stream consumer |
+| **notification-service** | 8080 | WebSocket push, notification storage, Kafka consumer |
 
-**Shared module** provides JWT auth filter, event records, and Redis stream utilities.
+**Shared module** provides JWT auth filter, event records, and Kafka infrastructure.
 
 ### Infrastructure
 
-- **Redis** — bidding engine (Lua scripts), streams, session data, geo index
+- **Kafka** — event streaming (bid.placed, auction.closed, payment.processed, payment.failed, refund.processed)
+- **Redis** — bidding engine (Lua scripts), session data, geo index, notification storage
 - **DynamoDB** — persistent storage for users, shops, items, payments, reviews
 - **MinIO/S3** — image uploads
 - **React + Vite** — frontend SPA
 
-### Event Streams
+### Event Topics
 
-Services communicate asynchronously via Redis Streams:
+Services communicate asynchronously via Kafka:
 
 ```
-auction-service → bid:placed    → bid-service, notification-service
-auction-service → auction:closed → bid-service, payment-service, notification-service
-payment-service → payment:processed, payment:failed, refund:processed
+auction-service → bid.placed     → bid-service, notification-service
+auction-service → auction.closed → bid-service, payment-service, notification-service
+payment-service → payment.processed, payment.failed, refund.processed
 ```
 
 ## Quick Start
@@ -58,7 +59,8 @@ The platform is available at:
 ## Tech Stack
 
 - Java 21, Spring Boot 3.3.5
-- Redis 7 (Lettuce client, Lua scripts, Streams, GEO)
+- Apache Kafka (KRaft mode, Spring Kafka)
+- Redis 7 (Lettuce client, Lua scripts, GEO)
 - AWS DynamoDB (Enhanced Client)
 - AWS S3 / MinIO
 - WebSocket (Spring WebSocket, `ConcurrentWebSocketSessionDecorator`)
@@ -108,7 +110,7 @@ Results from load testing:
 ```
 gavel/
 ├── pom.xml                    # Root Maven POM (Java 21, Spring Boot 3.3.5)
-├── shared/                    # JWT, events, Redis stream base classes
+├── shared/                    # JWT, events, Kafka publisher + config
 ├── auction-service/           # Core bidding engine
 ├── bid-service/               # Bid history consumer
 ├── notification-service/      # WebSocket + notification storage
