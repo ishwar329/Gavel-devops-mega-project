@@ -170,3 +170,32 @@ export interface UserNotificationEvent {
   notification: StoredNotification
   unread_count: number
 }
+
+export interface AuctionTemplate {
+  template_id:            string
+  seller_id:              string
+  shop_id:                string
+  item_id:                string
+  item_title:             string
+  shop_name:              string
+  shop_lat:               number
+  shop_lng:               number
+  retail_price:           number
+  max_price:              number
+  min_increment:          number
+  quantity:               number
+  image_url:              string
+  shop_logo_url:          string
+  description:            string
+  category:               string
+  duration_minutes:       number
+  start_bid:              number
+  pickup_offset_minutes:  number
+  pickup_window_minutes:  number
+  schedule_type:          'daily' | 'weekly'
+  schedule_days:          string
+  schedule_time:          string
+  active:                 boolean
+  created_at:             string
+  next_run_at:            string
+}

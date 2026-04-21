@@ -1,4 +1,4 @@
-import type { Auction, AuctionBid, AuctionStatus, Category, User, UserBid, Item, Shop, Payment, StoredNotification, ReviewsResponse, Review } from '@/types'
+import type { Auction, AuctionBid, AuctionStatus, AuctionTemplate, Category, User, UserBid, Item, Shop, Payment, StoredNotification, ReviewsResponse, Review } from '@/types'
 
 // ── Error type ───────────────────────────────────────────────────────────────
 
@@ -376,6 +376,45 @@ export const api = {
         method: 'POST',
         headers: jsonHeaders(token),
         body: JSON.stringify({ reply }),
+      }),
+  },
+
+  templates: {
+    /** POST /templates → AuctionTemplate */
+    create: (payload: {
+      item_id: string; item_title: string; shop_id: string; shop_name: string;
+      shop_lat?: number; shop_lng?: number; retail_price: number;
+      max_price?: number; min_increment?: number; quantity?: number;
+      image_url: string; shop_logo_url: string; description: string; category?: string;
+      duration_minutes: number; start_bid: number;
+      pickup_offset_minutes: number; pickup_window_minutes: number;
+      schedule_type: 'daily' | 'weekly'; schedule_days?: string; schedule_time: string;
+    }, token: string) =>
+      request<AuctionTemplate>('/templates', {
+        method: 'POST',
+        headers: jsonHeaders(token),
+        body: JSON.stringify(payload),
+      }),
+
+    /** GET /shops/:shopId/templates → { templates: AuctionTemplate[] } */
+    listByShop: (shopId: string, token: string) =>
+      request<{ templates: AuctionTemplate[] }>(`/shops/${shopId}/templates`, {
+        headers: jsonHeaders(token),
+      }).then((r) => r.templates ?? []),
+
+    /** PATCH /templates/:id/active → { message } */
+    toggleActive: (id: string, active: boolean, token: string) =>
+      request<{ message: string }>(`/templates/${id}/active`, {
+        method: 'PATCH',
+        headers: jsonHeaders(token),
+        body: JSON.stringify({ active }),
+      }),
+
+    /** DELETE /templates/:id → { message } */
+    delete: (id: string, token: string) =>
+      request<{ message: string }>(`/templates/${id}`, {
+        method: 'DELETE',
+        headers: jsonHeaders(token),
       }),
   },
 

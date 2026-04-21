@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import type { Shop, Auction, Item } from '@/types'
+import type { Shop, Auction, Item, AuctionTemplate } from '@/types'
 import { useAuth } from '@/context/AuthContext'
 import { api } from '@/lib/api'
 import { Card, Badge, Button, Spinner, EmptyState, StatCard, FormField, TextInput, StatusBanner, ImageUpload, LocationPicker } from '@/components/ui'
@@ -9,22 +9,24 @@ import { PageContainer } from '@/components/layout'
 import { ChevronLeftIcon } from '@/components/icons'
 import { formatCurrency } from '@/lib/utils'
 
-type Tab = 'items' | 'auctions'
+type Tab = 'items' | 'auctions' | 'templates'
 
 export default function SellerShopPage() {
   const { shopId, tab: urlTab } = useParams<{ shopId: string; tab?: string }>()
   const { user, token, isSeller } = useAuth()
   const navigate = useNavigate()
 
-  const initialTab: Tab = urlTab === 'auctions' ? 'auctions' : 'items'
+  const initialTab: Tab = urlTab === 'auctions' ? 'auctions' : urlTab === 'templates' ? 'templates' : 'items'
   const [activeTab, setActiveTab] = useState<Tab>(initialTab)
 
   const [shop,     setShop]     = useState<Shop | null>(null)
   const [items,    setItems]    = useState<Item[]>([])
   const [auctions, setAuctions] = useState<Auction[]>([])
+  const [templates, setTemplates] = useState<AuctionTemplate[]>([])
   const [loading,  setLoading]  = useState(true)
   const [error,    setError]    = useState<string | null>(null)
   const [closing,  setClosing]  = useState<string | null>(null)
+  const [togglingTemplate, setTogglingTemplate] = useState<string | null>(null)
 
   // Edit shop state
   const [editing,     setEditing]     = useState(false)
@@ -74,8 +76,9 @@ export default function SellerShopPage() {
       api.shops.get(shopId),
       api.shops.items(shopId),
       api.auctions.listByShop(shopId, token),
+      api.templates.listByShop(shopId, token),
     ])
-      .then(([s, i, a]) => { setShop(s); setItems(i); setAuctions(a) })
+      .then(([s, i, a, t]) => { setShop(s); setItems(i); setAuctions(a); setTemplates(t) })
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load shop'))
       .finally(() => setLoading(false))
   }, [shopId, token])
@@ -94,6 +97,31 @@ export default function SellerShopPage() {
       alert(err instanceof Error ? err.message : 'Failed to close auction')
     } finally {
       setClosing(null)
+    }
+  }
+
+  const handleToggleTemplate = async (templateId: string, active: boolean) => {
+    if (!token) return
+    setTogglingTemplate(templateId)
+    try {
+      await api.templates.toggleActive(templateId, active, token)
+      setTemplates((prev) =>
+        prev.map((t) => t.template_id === templateId ? { ...t, active } : t)
+      )
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to update template')
+    } finally {
+      setTogglingTemplate(null)
+    }
+  }
+
+  const handleDeleteTemplate = async (templateId: string) => {
+    if (!token || !confirm('Delete this recurring auction template?')) return
+    try {
+      await api.templates.delete(templateId, token)
+      setTemplates((prev) => prev.filter((t) => t.template_id !== templateId))
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete template')
     }
   }
 
@@ -200,7 +228,7 @@ export default function SellerShopPage() {
 
       {/* Tabs */}
       <div className="flex gap-0 border-b border-border mb-8">
-        {(['items', 'auctions'] as const).map((tab) => (
+        {(['items', 'auctions', 'templates'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => switchTab(tab)}
@@ -211,7 +239,7 @@ export default function SellerShopPage() {
                 : 'text-text-secondary hover:text-text-primary',
             ].join(' ')}
           >
-            {tab === 'items' ? `Items (${items.length})` : `Auctions (${auctions.length})`}
+            {tab === 'items' ? `Items (${items.length})` : tab === 'auctions' ? `Auctions (${auctions.length})` : `Recurring (${templates.length})`}
           </button>
         ))}
       </div>
@@ -409,6 +437,89 @@ export default function SellerShopPage() {
                 ))}
               </Card>
             </section>
+          )}
+        </>
+      )}
+
+      {/* ── Templates Tab ── */}
+      {activeTab === 'templates' && (
+        <>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-sans font-semibold text-xl text-text-primary">Recurring Auctions</h2>
+            <Button variant="primary" onClick={() => navigate(`/templates/new?shopId=${shopId}`)}>
+              + New Recurring Auction
+            </Button>
+          </div>
+
+          {templates.length === 0 && (
+            <EmptyState
+              message="No recurring auctions set up yet. Create a template to auto-publish auctions on a schedule."
+              action={
+                <Button variant="primary" onClick={() => navigate(`/templates/new?shopId=${shopId}`)}>
+                  Create Your First Template
+                </Button>
+              }
+            />
+          )}
+
+          {templates.length > 0 && (
+            <Card>
+              {templates.map((t, i) => (
+                <div
+                  key={t.template_id}
+                  className={`px-8 py-5 flex items-center justify-between gap-4 ${i !== 0 ? 'border-t border-border' : ''}`}
+                >
+                  <div className="flex items-center gap-4 min-w-0 flex-1">
+                    {t.image_url && (
+                      <img
+                        src={t.image_url}
+                        alt={t.item_title}
+                        className={`w-12 h-12 rounded-lg object-cover shrink-0 ${!t.active ? 'opacity-40' : ''}`}
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${t.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                          {t.active ? 'Active' : 'Paused'}
+                        </span>
+                        <span className="font-sans font-medium text-text-primary truncate">
+                          {t.item_title}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-text-secondary text-sm">
+                        <span>{t.schedule_type === 'daily' ? 'Daily' : `Weekly (${t.schedule_days})`}</span>
+                        <span>at {t.schedule_time} UTC</span>
+                        <span>{t.duration_minutes}min auction</span>
+                        <span>from {formatCurrency(t.start_bid)}</span>
+                      </div>
+                      {t.next_run_at && t.active && (
+                        <p className="text-text-secondary text-xs mt-1">
+                          Next: {new Date(t.next_run_at).toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={togglingTemplate === t.template_id}
+                      onClick={() => handleToggleTemplate(t.template_id, !t.active)}
+                    >
+                      {togglingTemplate === t.template_id ? '...' : t.active ? 'Pause' : 'Resume'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDeleteTemplate(t.template_id)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </Card>
           )}
         </>
       )}

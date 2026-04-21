@@ -57,6 +57,12 @@ public class InitTables {
                 List.of(key("reviewId", KeyType.HASH)),
                 List.of(gsi("shop_id-index", List.of(key("shopId", KeyType.HASH), key("createdAt", KeyType.RANGE))),
                         gsi("auction_id-reviewer-index", List.of(key("auctionId", KeyType.HASH), key("reviewerId", KeyType.RANGE)))));
+
+        createTable(db, "AuctionTemplates",
+                List.of(attr("template_id", ScalarAttributeType.S),
+                        attr("shop_id", ScalarAttributeType.S)),
+                List.of(key("template_id", KeyType.HASH)),
+                List.of(gsi("shop_id-index", List.of(key("shop_id", KeyType.HASH)))));
     }
 
     private static void createTable(DynamoDbClient db, String tableName,

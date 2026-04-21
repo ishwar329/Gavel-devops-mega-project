@@ -12,6 +12,7 @@ import ShopDetailPage    from '@/pages/ShopDetailPage'
 import CreateShopPage    from '@/pages/CreateShopPage'
 import CreateItemPage    from '@/pages/CreateItemPage'
 import CreateAuctionPage from '@/pages/CreateAuctionPage'
+import CreateTemplatePage from '@/pages/CreateTemplatePage'
 import SellerDashboardPage    from '@/pages/SellerDashboardPage'
 import SellerShopPage              from '@/pages/SellerShopPage'
 import SellerAuctionDetailPage    from '@/pages/SellerAuctionDetailPage'
@@ -43,6 +44,7 @@ export default function App() {
               <Route path="/shops/new"                 element={<CreateShopPage />} />
               <Route path="/shops/:shopId/items/new"   element={<CreateItemPage />} />
               <Route path="/auctions/new"              element={<CreateAuctionPage />} />
+              <Route path="/templates/new"             element={<CreateTemplatePage />} />
               <Route path="/shop/login"               element={<Navigate to="/login" replace />} />
               <Route path="/shop/register"            element={<Navigate to="/register" replace />} />
               <Route path="/seller/dashboard"              element={<SellerDashboardPage />} />

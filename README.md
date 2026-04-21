@@ -8,7 +8,7 @@ Multi-module Maven project with 6 Spring Boot microservices:
 
 | Service | Port | Responsibility |
 |---------|------|----------------|
-| **auction-service** | 8081 | Auction lifecycle, Lua-based bidding, auto-closer, geo queries |
+| **auction-service** | 8081 | Auction lifecycle, Lua-based bidding, auto-closer, recurring auction templates, geo queries |
 | **user-service** | 8082 | Registration, JWT auth, profiles, watchlists |
 | **shop-service** | 8083 | Shops, items, reviews, S3 image uploads |
 | **bid-service** | 8084 | Bid history (Redis), Kafka consumer |
@@ -21,7 +21,7 @@ Multi-module Maven project with 6 Spring Boot microservices:
 
 - **Kafka** — event streaming (bid.placed, auction.closed, payment.processed, payment.failed, refund.processed)
 - **Redis** — bidding engine (Lua scripts), session data, geo index, notification storage
-- **DynamoDB** — persistent storage for users, shops, items, payments, reviews
+- **DynamoDB** — persistent storage for users, shops, items, payments, reviews, auction templates
 - **MinIO/S3** — image uploads
 - **React + Vite** — frontend SPA
 
@@ -34,6 +34,15 @@ auction-service → bid.placed     → bid-service, notification-service
 auction-service → auction.closed → bid-service, payment-service, notification-service
 payment-service → payment.processed, payment.failed, refund.processed
 ```
+
+### Recurring Auctions
+
+Sellers can create auction templates that auto-publish auctions on a schedule — ideal for bakeries and restaurants with predictable daily surplus.
+
+- **Schedule types**: daily or weekly (with specific day selection)
+- **Auto-computed pickup windows**: configurable offset and duration relative to auction end
+- **Template management**: pause, resume, and delete from the seller dashboard "Recurring" tab
+- **Scheduler**: `TemplateScheduler` checks active templates every 30s and generates auctions via the standard `AuctionService.createAuction()` flow
 
 ## Quick Start
 
