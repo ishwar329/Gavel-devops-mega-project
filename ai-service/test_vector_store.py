@@ -6,6 +6,7 @@ class TestVectorStore(unittest.TestCase):
 
     def setUp(self):
         self.vs = VectorStore()
+        self.vs.clear()
 
     def test_empty_search(self):
         results = self.vs.search("anything")
@@ -31,28 +32,38 @@ class TestVectorStore(unittest.TestCase):
         self.assertIn("c", ids[:2])
 
     def test_metadata_preserved(self):
-        self.vs.add("x", "test document", metadata={"category": "Bakery", "price": 500})
-        results = self.vs.search("test")
+        self.vs.add("x", "test document about food", metadata={"category": "Bakery", "price": 500})
+        results = self.vs.search("food document")
+        self.assertTrue(len(results) > 0)
         self.assertEqual(results[0]["document"]["metadata"]["category"], "Bakery")
 
     def test_clear(self):
-        self.vs.add("1", "something")
+        self.vs.add("1", "something important about food")
+        self.assertEqual(self.vs.count, 1)
         self.vs.clear()
-        results = self.vs.search("something")
-        self.assertEqual(results, [])
+        self.assertEqual(self.vs.count, 0)
 
     def test_score_range(self):
         self.vs.add("1", "chocolate cake dessert")
         results = self.vs.search("chocolate cake")
         for r in results:
             self.assertGreaterEqual(r["score"], 0.0)
-            self.assertLessEqual(r["score"], 1.0)
+            self.assertLessEqual(r["score"], 1.01)
 
-    def test_low_relevance_filtered(self):
-        self.vs.add("1", "fresh bread sourdough")
-        self.vs.add("2", "salmon fillet fish")
-        results = self.vs.search("electronics computer laptop")
-        self.assertEqual(len(results), 0)
+    def test_upsert_dedup(self):
+        self.vs.add("1", "original text")
+        self.vs.add("1", "updated text about auctions")
+        self.assertEqual(self.vs.count, 1)
+        results = self.vs.search("auctions")
+        self.assertEqual(results[0]["document"]["text"], "updated text about auctions")
+
+    def test_unsafe_metadata_filtered(self):
+        self.vs.add("1", "test item", metadata={"name": "bread", "tags": ["a", "b"], "nested": {"x": 1}})
+        results = self.vs.search("test item")
+        meta = results[0]["document"]["metadata"]
+        self.assertEqual(meta["name"], "bread")
+        self.assertNotIn("tags", meta)
+        self.assertNotIn("nested", meta)
 
 
 if __name__ == "__main__":

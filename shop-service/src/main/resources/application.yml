@@ -7,6 +7,8 @@ spring:
     name: shop-service
   jackson:
     property-naming-strategy: SNAKE_CASE
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
   lifecycle:
     timeout-per-shutdown-phase: 15s
   servlet:

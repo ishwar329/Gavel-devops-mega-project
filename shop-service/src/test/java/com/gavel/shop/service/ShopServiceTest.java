@@ -1,5 +1,6 @@
 package com.gavel.shop.service;
 
+import com.gavel.shared.kafka.KafkaPublisher;
 import com.gavel.shop.model.*;
 import com.gavel.shop.repository.ShopRepository;
 import com.gavel.shop.storage.S3Uploader;
@@ -30,6 +31,9 @@ class ShopServiceTest {
     @Mock
     private S3Uploader uploader;
 
+    @Mock
+    private KafkaPublisher kafkaPublisher;
+
     private ShopService service;
 
     private static final String OWNER_ID = "owner-123";
@@ -38,7 +42,7 @@ class ShopServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ShopService(repository, uploader,
+        service = new ShopService(repository, uploader, kafkaPublisher,
                 "http://localhost:3000/uploads", "");
     }
 

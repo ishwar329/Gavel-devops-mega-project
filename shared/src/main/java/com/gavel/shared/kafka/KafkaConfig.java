@@ -88,4 +88,14 @@ public class KafkaConfig {
     public NewTopic refundProcessedTopic() {
         return TopicBuilder.name(Topics.REFUND_PROCESSED).partitions(3).replicas(1).build();
     }
+
+    @Bean
+    public NewTopic itemCreatedTopic() {
+        return TopicBuilder.name(Topics.ITEM_CREATED).partitions(3).replicas(1).build();
+    }
+
+    @Bean
+    public NewTopic reviewCreatedTopic() {
+        return TopicBuilder.name(Topics.REVIEW_CREATED).partitions(3).replicas(1).build();
+    }
 }

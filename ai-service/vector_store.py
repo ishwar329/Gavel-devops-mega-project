@@ -1,43 +1,52 @@
-import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+import chromadb
 
 
 class VectorStore:
     def __init__(self) -> None:
-        self.documents: list[dict] = []
-        self._vectorizer = TfidfVectorizer(max_features=5000, stop_words="english")
-        self._matrix = None
-        self._dirty = True
+        self._client = chromadb.Client()
+        self._collection = self._client.get_or_create_collection(
+            name="gavel", metadata={"hnsw:space": "cosine"}
+        )
+
+    @property
+    def count(self) -> int:
+        return self._collection.count()
 
     def clear(self) -> None:
-        self.documents.clear()
-        self._matrix = None
-        self._dirty = True
+        self._client.delete_collection("gavel")
+        self._collection = self._client.get_or_create_collection(
+            name="gavel", metadata={"hnsw:space": "cosine"}
+        )
 
     def add(self, doc_id: str, text: str, metadata: dict | None = None) -> None:
-        self.documents.append({"id": doc_id, "text": text, "metadata": metadata or {}})
-        self._dirty = True
-
-    def _rebuild(self) -> None:
-        if not self.documents:
-            self._matrix = None
-            self._dirty = False
-            return
-        texts = [d["text"] for d in self.documents]
-        self._matrix = self._vectorizer.fit_transform(texts)
-        self._dirty = False
+        safe_meta: dict | None = None
+        if metadata:
+            filtered = {k: v for k, v in metadata.items() if isinstance(v, (str, int, float, bool))}
+            if filtered:
+                safe_meta = filtered
+        self._collection.upsert(
+            ids=[doc_id],
+            documents=[text],
+            metadatas=[safe_meta] if safe_meta else None,
+        )
 
     def search(self, query: str, top_k: int = 5) -> list[dict]:
-        if self._dirty:
-            self._rebuild()
-        if self._matrix is None or self._matrix.shape[0] == 0:
+        if self._collection.count() == 0:
             return []
-        query_vec = self._vectorizer.transform([query])
-        scores = cosine_similarity(query_vec, self._matrix).flatten()
-        top_indices = np.argsort(scores)[::-1][:top_k]
-        return [
-            {"document": self.documents[i], "score": float(scores[i])}
-            for i in top_indices
-            if scores[i] > 0.01
-        ]
+        n = min(top_k, self._collection.count())
+        results = self._collection.query(query_texts=[query], n_results=n)
+        output = []
+        for i in range(len(results["ids"][0])):
+            distance = results["distances"][0][i] if results.get("distances") else 0
+            score = 1.0 - distance
+            if score < 0.01:
+                continue
+            output.append({
+                "document": {
+                    "id": results["ids"][0][i],
+                    "text": results["documents"][0][i],
+                    "metadata": results["metadatas"][0][i] if results.get("metadatas") else {},
+                },
+                "score": score,
+            })
+        return output

@@ -10,7 +10,7 @@ Multi-module Maven project with 6 Spring Boot microservices + a Python AI servic
 |---------|------|----------------|
 | **auction-service** | 8081 | Auction lifecycle, Lua-based bidding, auto-closer, recurring auction templates, geo queries |
 | **user-service** | 8082 | Registration, JWT auth, profiles, watchlists |
-| **shop-service** | 8083 | Shops, items, reviews, S3 image uploads, AI description generator |
+| **shop-service** | 8083 | Shops, items, reviews, S3 image uploads, AI description generator, Kafka events |
 | **bid-service** | 8084 | Bid history (Redis), Kafka consumer |
 | **payment-service** | 8085 | Payment processing, recovery job, DynamoDB |
 | **notification-service** | 8080 | WebSocket push, notification storage, Kafka consumer |
@@ -20,7 +20,7 @@ Multi-module Maven project with 6 Spring Boot microservices + a Python AI servic
 
 ### Infrastructure
 
-- **Kafka** — event streaming (bid.placed, auction.closed, payment.processed, payment.failed, refund.processed)
+- **Kafka** — event streaming (bid.placed, auction.closed, payment.processed, payment.failed, refund.processed, item.created, review.created)
 - **Redis** — bidding engine (Lua scripts), session data, geo index, notification storage
 - **DynamoDB** — persistent storage for users, shops, items, payments, reviews, auction templates
 - **MinIO/S3** — image uploads
@@ -35,6 +35,8 @@ Services communicate asynchronously via Kafka:
 auction-service → bid.placed     → bid-service, notification-service, ai-service
 auction-service → auction.closed → bid-service, payment-service, notification-service
 payment-service → payment.processed, payment.failed, refund.processed
+shop-service    → item.created   → ai-service
+shop-service    → review.created → ai-service
 ```
 
 ### AI Description Generator
@@ -61,7 +63,7 @@ Buyers get personalized auction recommendations and a conversational assistant p
 - Conversation memory per session (last 10 messages, 30-min TTL)
 - Endpoint: `POST /ai/chat` with `{message, conversation_id}` (buyer auth required)
 
-**Infrastructure**: FastAPI + PyJWT (validates same HS256 `JWT_SECRET`), Kafka consumer for `bid.placed` events, provider-agnostic LLM client (Anthropic/OpenAI)
+**Infrastructure**: FastAPI + PyJWT (validates same HS256 `JWT_SECRET`), Kafka consumer for real-time indexing (`bid.placed`, `item.created`, `review.created` events), Chroma vector store with sentence-transformer embeddings, provider-agnostic LLM client (Anthropic/OpenAI)
 
 ### Recurring Auctions
 

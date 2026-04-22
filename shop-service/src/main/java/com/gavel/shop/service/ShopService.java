@@ -1,8 +1,14 @@
 package com.gavel.shop.service;
 
+import com.gavel.shared.events.ItemCreatedEvent;
+import com.gavel.shared.events.ReviewCreatedEvent;
+import com.gavel.shared.kafka.KafkaPublisher;
+import com.gavel.shared.kafka.Topics;
 import com.gavel.shop.model.*;
 import com.gavel.shop.repository.ShopRepository;
 import com.gavel.shop.storage.S3Uploader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -14,6 +20,8 @@ import java.util.*;
 @Service
 public class ShopService {
 
+    private static final Logger log = LoggerFactory.getLogger(ShopService.class);
+
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
     private static final Map<String, String> ALLOWED_MIME_TYPES = Map.of(
             "image/jpeg", ".jpg",
@@ -24,15 +32,18 @@ public class ShopService {
 
     private final ShopRepository repository;
     private final S3Uploader uploader;
+    private final KafkaPublisher kafkaPublisher;
     private final String publicUrl;
     private final RestClient paymentClient;
 
     public ShopService(ShopRepository repository,
                        S3Uploader uploader,
+                       KafkaPublisher kafkaPublisher,
                        @Value("${aws.s3.public-url:http://localhost:3000/uploads}") String publicUrl,
                        @Value("${payment.service.url:}") String paymentServiceUrl) {
         this.repository = repository;
         this.uploader = uploader;
+        this.kafkaPublisher = kafkaPublisher;
         this.publicUrl = publicUrl;
         this.paymentClient = paymentServiceUrl != null && !paymentServiceUrl.isBlank()
                 ? RestClient.builder().baseUrl(paymentServiceUrl).build()
@@ -107,7 +118,20 @@ public class ShopService {
         item.setImageUrl(request.imageUrl());
         item.setCategory(request.category());
         repository.saveItem(item);
+        publishItemCreated(item);
         return item;
+    }
+
+    private void publishItemCreated(Item item) {
+        try {
+            var event = new ItemCreatedEvent(
+                    item.getItemId(), item.getShopId(), item.getTitle(),
+                    item.getDescription(), item.getRetailValue() != null ? item.getRetailValue() : 0,
+                    item.getCategory(), item.getImageUrl());
+            kafkaPublisher.publish(Topics.ITEM_CREATED, item.getItemId(), event);
+        } catch (Exception e) {
+            log.warn("Failed to publish item.created event: {}", e.getMessage());
+        }
     }
 
     public List<Shop> listSellerShops(String ownerId) {
@@ -145,7 +169,22 @@ public class ShopService {
         review.setCreatedAt(now);
         review.setUpdatedAt(now);
         repository.saveReview(review);
+        publishReviewCreated(review, shopId);
         return review;
+    }
+
+    private void publishReviewCreated(Review review, String shopId) {
+        try {
+            String shopName = repository.findShopById(shopId)
+                    .map(Shop::getName).orElse("Unknown Shop");
+            var event = new ReviewCreatedEvent(
+                    review.getReviewId(), shopId, shopName,
+                    review.getReviewerUsername(), review.getAuctionId(),
+                    review.getRating(), review.getComment());
+            kafkaPublisher.publish(Topics.REVIEW_CREATED, review.getReviewId(), event);
+        } catch (Exception e) {
+            log.warn("Failed to publish review.created event: {}", e.getMessage());
+        }
     }
 
     public ReviewsResponse listReviews(String shopId) {

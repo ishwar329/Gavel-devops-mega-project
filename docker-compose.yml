@@ -106,10 +106,13 @@ services:
       - S3_PUBLIC_URL=http://localhost:9000/uploads
       - JWT_SECRET=dev-secret-change-in-production-key
       - PAYMENT_SERVICE_URL=http://payment:8085
+      - KAFKA_BROKERS=kafka:9092
     depends_on:
       dynamodb-local:
         condition: service_healthy
       minio:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
       init-tables:
         condition: service_completed_successfully

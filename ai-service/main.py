@@ -82,12 +82,30 @@ async def _refresh_loop() -> None:
             logger.info(
                 "Refreshed %d auctions, %d documents in vector store",
                 len(auctions),
-                len(vector_store.documents),
+                vector_store.count,
             )
         except Exception as e:
             logger.warning("Refresh failed: %s", e)
 
         await asyncio.sleep(30)
+
+
+def _build_item_text(event: dict) -> str:
+    parts = [f"Item: {event.get('title', 'Unknown')}"]
+    if event.get("description"):
+        parts.append(f"Description: {event['description']}")
+    if event.get("category"):
+        parts.append(f"Category: {event['category']}")
+    if event.get("retail_value"):
+        parts.append(f"Retail value: ${event['retail_value'] / 100:.2f}")
+    return ". ".join(parts)
+
+
+def _build_review_text(event: dict) -> str:
+    shop = event.get("shop_name", "a shop")
+    comment = event.get("comment", "")
+    rating = event.get("rating", 0)
+    return f"Review for {shop}: {comment} (Rating: {rating}/5)"
 
 
 async def _kafka_consumer_loop() -> None:
@@ -97,6 +115,8 @@ async def _kafka_consumer_loop() -> None:
         consumer = AIOKafkaConsumer(
             "bid.placed",
             "auction.closed",
+            "item.created",
+            "review.created",
             bootstrap_servers=KAFKA_BROKERS,
             group_id="ai-service",
             auto_offset_reset="latest",
@@ -107,13 +127,34 @@ async def _kafka_consumer_loop() -> None:
         try:
             async for msg in consumer:
                 try:
+                    event = msg.value
                     if msg.topic == "bid.placed":
-                        event = msg.value
                         auction_id = event.get("auction_id", "")
                         category = recommender.auction_categories.get(auction_id)
                         recommender.record_bid(
                             event.get("user_id", ""), auction_id, category
                         )
+                    elif msg.topic == "item.created":
+                        item_id = event.get("item_id", "")
+                        text = _build_item_text(event)
+                        vector_store.add(f"item-{item_id}", text, metadata={
+                            "type": "item",
+                            "item_id": item_id,
+                            "shop_id": event.get("shop_id", ""),
+                            "title": event.get("title", ""),
+                            "category": event.get("category", ""),
+                        })
+                        logger.info("Indexed item %s into vector store", item_id)
+                    elif msg.topic == "review.created":
+                        review_id = event.get("review_id", "")
+                        text = _build_review_text(event)
+                        vector_store.add(f"review-{review_id}", text, metadata={
+                            "type": "review",
+                            "review_id": review_id,
+                            "shop_id": event.get("shop_id", ""),
+                            "rating": event.get("rating", 0),
+                        })
+                        logger.info("Indexed review %s into vector store", review_id)
                 except Exception as e:
                     logger.warning("Error processing Kafka message: %s", e)
         finally:
