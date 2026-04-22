@@ -43,6 +43,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/shops/{shopId}/reviews").permitAll()
                         .requestMatchers(HttpMethod.GET, "/sellers/{userId}/shops").permitAll()
                         .requestMatchers(HttpMethod.GET, "/items/{itemId}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/ai/status").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),

@@ -10,7 +10,7 @@ Multi-module Maven project with 6 Spring Boot microservices:
 |---------|------|----------------|
 | **auction-service** | 8081 | Auction lifecycle, Lua-based bidding, auto-closer, recurring auction templates, geo queries |
 | **user-service** | 8082 | Registration, JWT auth, profiles, watchlists |
-| **shop-service** | 8083 | Shops, items, reviews, S3 image uploads |
+| **shop-service** | 8083 | Shops, items, reviews, S3 image uploads, AI description generator |
 | **bid-service** | 8084 | Bid history (Redis), Kafka consumer |
 | **payment-service** | 8085 | Payment processing, recovery job, DynamoDB |
 | **notification-service** | 8080 | WebSocket push, notification storage, Kafka consumer |
@@ -34,6 +34,14 @@ auction-service → bid.placed     → bid-service, notification-service
 auction-service → auction.closed → bid-service, payment-service, notification-service
 payment-service → payment.processed, payment.failed, refund.processed
 ```
+
+### AI Description Generator
+
+Sellers can generate product descriptions with AI when creating items. A "Generate with AI" button on the Add Item page sends the item title, category, and retail value to an LLM and populates the description textarea with a 2–3 sentence suggestion the seller can edit before saving.
+
+- **Provider-agnostic**: supports Anthropic (default) and OpenAI via `AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL` env vars
+- **Graceful fallback**: button hidden / endpoint returns 503 if no API key is configured
+- **Endpoint**: `POST /ai/describe` on shop-service (seller auth required)
 
 ### Recurring Auctions
 
@@ -89,15 +97,15 @@ The platform is available at:
 
 ## Testing
 
-**Unit tests** — 477 tests with 84.2% overall coverage:
+**Unit tests** — 545 tests with 89.4% overall coverage:
 ```bash
 ./mvnw test
 ```
 
 Coverage by service:
-- shop-service: 90.4% | payment-service: 87.4% | auction-service: 84.2%
-- notification-service: 83.5% | shared: 83.8% | user-service: 79.2%
-- bid-service: 74.7%
+- notification-service: 92.4% | shop-service: 91.4% | auction-service: 89.6%
+- payment-service: 89.5% | bid-service: 87.8% | shared: 87.6%
+- user-service: 82.2%
 
 **Smoke tests** — end-to-end API contract validation:
 ```bash

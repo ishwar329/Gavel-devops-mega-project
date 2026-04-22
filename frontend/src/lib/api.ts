@@ -418,6 +418,15 @@ export const api = {
       }),
   },
 
+  ai: {
+    describe: (title: string, category: string | undefined, retailValue: number | undefined, token: string) =>
+      request<{ description: string }>('/ai/describe', {
+        method: 'POST',
+        headers: jsonHeaders(token),
+        body: JSON.stringify({ title, category, retail_value: retailValue }),
+      }).then((r) => r.description),
+  },
+
   payments: {
     /** GET /users/:userId/payments → Payment[] */
     listByUser: (userId: string, token: string) =>

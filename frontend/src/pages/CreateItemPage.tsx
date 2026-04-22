@@ -19,6 +19,7 @@ export default function CreateItemPage() {
   const [imageUrl,    setImageUrl]    = useState('')
   const [category,    setCategory]    = useState('')
   const [loading,     setLoading]     = useState(false)
+  const [aiLoading,   setAiLoading]   = useState(false)
   const [error,       setError]       = useState<string | null>(null)
   const [catOpen,     setCatOpen]     = useState(false)
   const catRef = useRef<HTMLDivElement>(null)
@@ -30,6 +31,24 @@ export default function CreateItemPage() {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
+
+  const handleGenerate = async () => {
+    setAiLoading(true)
+    setError(null)
+    try {
+      const desc = await api.ai.describe(
+        title,
+        category || undefined,
+        retailValue ? Math.round(parseFloat(retailValue) * 100) : undefined,
+        token!,
+      )
+      setDescription(desc)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'AI generation failed')
+    } finally {
+      setAiLoading(false)
+    }
+  }
 
   if (!user || !isSeller) {
     return (
@@ -98,7 +117,29 @@ export default function CreateItemPage() {
             />
           </FormField>
 
-          <FormField label="Description">
+          <FormField label={
+            <span className="flex items-center justify-between w-full">
+              <span>Description</span>
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={!title.trim() || aiLoading}
+                className="inline-flex items-center gap-1.5 px-3 py-1 text-sm font-medium rounded-lg bg-brand/10 text-brand hover:bg-brand/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {aiLoading ? (
+                  <>
+                    <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+                    Generating…
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z"/></svg>
+                    Generate with AI
+                  </>
+                )}
+              </button>
+            </span>
+          }>
             <TextArea
               rows={3}
               placeholder="Describe the item — contents, freshness, best-before, etc."

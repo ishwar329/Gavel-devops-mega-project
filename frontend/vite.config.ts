@@ -13,6 +13,7 @@ export default defineConfig({
       '/auctions': { target: 'http://localhost:8081', ws: true },
       '/auth':     { target: 'http://localhost:8082' },
       '/users':    { target: 'http://localhost:8082' },
+      '/ai':       { target: 'http://localhost:8083' },
       '/shops':    { target: 'http://localhost:8083' },
       '/sellers':  { target: 'http://localhost:8083' },
       '/uploads':  { target: 'http://localhost:8083' },

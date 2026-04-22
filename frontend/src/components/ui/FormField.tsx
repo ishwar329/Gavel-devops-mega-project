@@ -3,7 +3,7 @@ import type { InputHTMLAttributes, TextareaHTMLAttributes, ReactNode } from 'rea
 // ── FormField ────────────────────────────────────────────────────────────────
 
 interface FormFieldProps {
-  label?: string
+  label?: ReactNode
   hint?: string
   error?: string
   children: ReactNode
