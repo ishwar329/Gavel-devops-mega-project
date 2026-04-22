@@ -5,6 +5,7 @@ import { WatchlistProvider } from '@/context/WatchlistContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Navbar } from '@/components/layout'
 import { NotificationToast } from '@/components/ui/Toast'
+import { ChatWidget } from '@/components/ai'
 import HomePage          from '@/pages/HomePage'
 import AuctionDetailPage from '@/pages/AuctionDetailPage'
 import AuthPage          from '@/pages/AuthPage'
@@ -31,6 +32,7 @@ export default function App() {
         <div className="min-h-screen flex flex-col font-sans selection:bg-brand/20">
           <Navbar />
           <NotificationToast />
+          <ChatWidget />
           <main className="flex-1">
             <Routes>
               <Route path="/"                          element={<HomePage />} />

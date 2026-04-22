@@ -185,6 +185,28 @@ services:
       kafka:
         condition: service_healthy
 
+  ai:
+    build:
+      context: ./ai-service
+    ports:
+      - "8086:8086"
+    environment:
+      - JWT_SECRET=dev-secret-change-in-production-key
+      - AI_PROVIDER=anthropic
+      - AI_API_KEY=${AI_API_KEY:-}
+      - AI_MODEL=${AI_MODEL:-}
+      - KAFKA_BROKERS=kafka:9092
+      - AUCTION_SERVICE_URL=http://auction:8081
+      - USER_SERVICE_URL=http://user:8082
+      - SHOP_SERVICE_URL=http://shop:8083
+    depends_on:
+      kafka:
+        condition: service_healthy
+      auction:
+        condition: service_started
+      shop:
+        condition: service_started
+
   frontend:
     build:
       context: ./frontend
@@ -195,3 +217,4 @@ services:
       - shop
       - bid
       - notification
+      - ai

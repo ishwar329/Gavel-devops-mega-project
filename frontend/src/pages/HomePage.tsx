@@ -6,6 +6,7 @@ import { api } from '@/lib/api'
 import { pickupOverlaps } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 import { AuctionCard } from '@/components/auction'
+import { RecommendationRow } from '@/components/ai'
 import { PageContainer } from '@/components/layout'
 import { Spinner, EmptyState, FilterDropdown } from '@/components/ui'
 
@@ -176,6 +177,8 @@ export default function HomePage() {
           />
         </div>
       </div>
+
+      <RecommendationRow userCoords={userCoords ?? undefined} />
 
       {loading && <Spinner className="py-20" />}
 

@@ -4,7 +4,7 @@ Surplus food and item auction platform. Sellers list items from their shops, buy
 
 ## Architecture
 
-Multi-module Maven project with 6 Spring Boot microservices:
+Multi-module Maven project with 6 Spring Boot microservices + a Python AI service:
 
 | Service | Port | Responsibility |
 |---------|------|----------------|
@@ -14,6 +14,7 @@ Multi-module Maven project with 6 Spring Boot microservices:
 | **bid-service** | 8084 | Bid history (Redis), Kafka consumer |
 | **payment-service** | 8085 | Payment processing, recovery job, DynamoDB |
 | **notification-service** | 8080 | WebSocket push, notification storage, Kafka consumer |
+| **ai-service** | 8086 | Auction recommendations, RAG chatbot (Python/FastAPI) |
 
 **Shared module** provides JWT auth filter, event records, and Kafka infrastructure.
 
@@ -24,13 +25,14 @@ Multi-module Maven project with 6 Spring Boot microservices:
 - **DynamoDB** — persistent storage for users, shops, items, payments, reviews, auction templates
 - **MinIO/S3** — image uploads
 - **React + Vite** — frontend SPA
+- **Python / FastAPI** — AI recommendation & chatbot service
 
 ### Event Topics
 
 Services communicate asynchronously via Kafka:
 
 ```
-auction-service → bid.placed     → bid-service, notification-service
+auction-service → bid.placed     → bid-service, notification-service, ai-service
 auction-service → auction.closed → bid-service, payment-service, notification-service
 payment-service → payment.processed, payment.failed, refund.processed
 ```
@@ -42,6 +44,24 @@ Sellers can generate product descriptions with AI when creating items. A "Genera
 - **Provider-agnostic**: supports Anthropic (default) and OpenAI via `AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL` env vars
 - **Graceful fallback**: button hidden / endpoint returns 503 if no API key is configured
 - **Endpoint**: `POST /ai/describe` on shop-service (seller auth required)
+
+### AI Recommendations & Chatbot
+
+Buyers get personalized auction recommendations and a conversational assistant powered by a dedicated Python AI service.
+
+**Recommendations** — "Recommended for You" section on the homepage:
+- Scoring: category affinity (40%) + ending-soon urgency (25%) + popularity (20%) + proximity (15%)
+- Collaborative filtering boosts auctions liked by similar bidders
+- Returns top 8 auctions with a "why" reason per pick
+- Endpoint: `GET /ai/recommendations?lat=X&lng=Y` (buyer auth required)
+
+**RAG Chatbot** — floating chat widget on all buyer pages:
+- Indexes auction listings and shop reviews into a TF-IDF vector store (refreshed every 30s)
+- Retrieves top-5 relevant context chunks per query, injects into LLM system prompt
+- Conversation memory per session (last 10 messages, 30-min TTL)
+- Endpoint: `POST /ai/chat` with `{message, conversation_id}` (buyer auth required)
+
+**Infrastructure**: FastAPI + PyJWT (validates same HS256 `JWT_SECRET`), Kafka consumer for `bid.placed` events, provider-agnostic LLM client (Anthropic/OpenAI)
 
 ### Recurring Auctions
 
@@ -69,7 +89,7 @@ k6 run tests/loadtest/k6_bid_contention.js
 
 The platform is available at:
 - Frontend: http://localhost:5173
-- Services: http://localhost:8080-8085
+- Services: http://localhost:8080-8086
 - MinIO Console: http://localhost:9001 (minioadmin/minioadmin)
 - DynamoDB Local: http://localhost:8000
 
@@ -81,9 +101,10 @@ The platform is available at:
 - AWS DynamoDB (Enhanced Client)
 - AWS S3 / MinIO
 - WebSocket (Spring WebSocket, `ConcurrentWebSocketSessionDecorator`)
-- JWT (jjwt / HS256)
+- JWT (jjwt / HS256, PyJWT for ai-service)
 - React + TypeScript + Vite
-- Docker multi-stage builds (Eclipse Temurin 21)
+- Python 3.12, FastAPI, scikit-learn
+- Docker multi-stage builds (Eclipse Temurin 21, python:3.12-slim)
 
 ## Building
 
@@ -97,15 +118,15 @@ The platform is available at:
 
 ## Testing
 
-**Unit tests** — 545 tests with 89.4% overall coverage:
+**Java unit tests** — 168 tests across all services:
 ```bash
 ./mvnw test
 ```
 
-Coverage by service:
-- notification-service: 92.4% | shop-service: 91.4% | auction-service: 89.6%
-- payment-service: 89.5% | bid-service: 87.8% | shared: 87.6%
-- user-service: 82.2%
+**Python unit tests** — 30 tests for ai-service:
+```bash
+cd ai-service && python -m pytest
+```
 
 **Smoke tests** — end-to-end API contract validation:
 ```bash
@@ -134,6 +155,7 @@ gavel/
 ├── user-service/              # Auth + user management
 ├── shop-service/              # Shops, items, reviews, uploads
 ├── payment-service/           # Payment processing + recovery
+├── ai-service/                # Recommendations + RAG chatbot (Python)
 ├── frontend/                  # React SPA
 ├── scripts/init-tables/       # DynamoDB table initialization
 ├── tests/                     # Smoke + load tests

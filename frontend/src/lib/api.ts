@@ -425,6 +425,32 @@ export const api = {
         headers: jsonHeaders(token),
         body: JSON.stringify({ title, category, retail_value: retailValue }),
       }).then((r) => r.description),
+
+    /** GET /ai/recommendations → { recommendations: Recommendation[] } */
+    recommendations: (token: string, opts?: { lat?: number; lng?: number }) => {
+      let url = '/ai/recommendations'
+      const params = new URLSearchParams()
+      if (opts?.lat !== undefined) params.set('lat', String(opts.lat))
+      if (opts?.lng !== undefined) params.set('lng', String(opts.lng))
+      if (params.toString()) url += `?${params}`
+      return request<{ recommendations: { auction: BackendAuction; reason: string; score: number }[] }>(url, {
+        headers: jsonHeaders(token),
+      }).then((r) =>
+        (r.recommendations ?? []).map((rec) => ({
+          auction: toAuction(rec.auction),
+          reason: rec.reason,
+          score: rec.score,
+        })),
+      )
+    },
+
+    /** POST /ai/chat → { response, conversation_id } */
+    chat: (message: string, conversationId: string | undefined, token: string) =>
+      request<{ response: string; conversation_id: string }>('/ai/chat', {
+        method: 'POST',
+        headers: jsonHeaders(token),
+        body: JSON.stringify({ message, conversation_id: conversationId }),
+      }),
   },
 
   payments: {
