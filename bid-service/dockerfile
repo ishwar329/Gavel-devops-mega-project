@@ -1,0 +1,20 @@
+#first stage
+FROM eclipse-temurin:21-jdk AS build
+WORKDIR /app
+COPY .mvn .mvn
+COPY  mvnw .
+COPY pom.xml .
+COPY bid-service/pom.xml bid-service/pom.xml 
+COPY shared/pom.xml  shared/pom.xml
+COPY bid-service/src bid-service/src 
+COPY shared/src  shared/src
+RUN chmod +x mvnw
+RUN ./mvnw clean package -pl bid-service -am -DskipTests
+
+
+#second stage
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+COPY --from=build /app/bid-service/target/*.jar app.jar
+EXPOSE 8084
+ENTRYPOINT ["java","-jar","app.jar"]
